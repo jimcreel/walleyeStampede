@@ -17,10 +17,10 @@ export default function App() {
 
     useEffect(() => {
       db.transaction(tx => {
-        tx.executeSql('DROP TABLE IF EXISTS tournaments;', [], 
-          () => console.log('Drop successful'),
-          (_, error) => { console.log('Error dropping table: ', error); return true; }
-        );
+        // tx.executeSql('DROP TABLE IF EXISTS tournaments;', [], 
+        //   () => console.log('Drop successful'),
+        //   (_, error) => { console.log('Error dropping table: ', error); return true; }
+        // );
     
         tx.executeSql(
           'CREATE TABLE IF NOT EXISTS tournaments (id integer primary key not null, name text, startDate text, endDate text);', [],
@@ -52,8 +52,8 @@ export default function App() {
 
   const addTournament = () => {
     db.transaction(tx => {
-      console.log(endDate)
-      tx.executeSql('insert into tournaments (name, startDate, endDate) values (?, ? , ?);', [currentTournament, startDate, endDate], 
+      
+      tx.executeSql('insert into tournaments (name, startDate, endDate) values (?, ?, ?);', [currentTournament, startDate, endDate], 
       (txObj, resultSet) => {
         let existingTournaments = [...tournaments];
         existingTournaments = [...existingTournaments, {id: resultSet.insertId, name: currentTournament, startDate: startDate, endDate: endDate}];
