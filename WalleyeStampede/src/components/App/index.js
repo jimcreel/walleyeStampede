@@ -23,7 +23,7 @@ export default function App() {
         );
     
         tx.executeSql(
-          'CREATE TABLE IF NOT EXISTS tournaments (id integer primary key not null, name text, startDate date, endDate date);', [],
+          'CREATE TABLE IF NOT EXISTS tournaments (id integer primary key not null, name text, startDate text, endDate text);', [],
           () => { console.log('Table created or already exists'); },
           (_, error) => { console.log('Error occurred while creating the table: ', error); return true; }
         );
@@ -52,7 +52,8 @@ export default function App() {
 
   const addTournament = () => {
     db.transaction(tx => {
-      tx.executeSql('insert into tournaments (name, startDate, endDate) values (?);', [currentTournament], 
+      console.log(endDate)
+      tx.executeSql('insert into tournaments (name, startDate, endDate) values (?, ? , ?);', [currentTournament, startDate, endDate], 
       (txObj, resultSet) => {
         let existingTournaments = [...tournaments];
         existingTournaments = [...existingTournaments, {id: resultSet.insertId, name: currentTournament, startDate: startDate, endDate: endDate}];
@@ -63,26 +64,49 @@ export default function App() {
     });
   }
 
-  const showTournaments = () => {
-    return tournaments.map((item, index) => {
-      return (
-        <View key={index}>
-          <Text>{item.name}</Text>
-        </View>
-      );
+  const deleteTournament = (id) => {
+    db.transaction(tx => {
+      tx.executeSql('delete from tournaments where id = ?;', [id],
+      (txObj, resultSet) => {
+        let existingTournaments = [...tournaments];
+        existingTournaments = existingTournaments.filter(tournament => tournament.id !== id);
+        setTournaments(existingTournaments);
+      },
+      (txObj, error) => console.log('Error', error));
     });
   }
 
+  
+
+  let tournamentList = 'loading'
+
+  if (tournaments.length > 0) {
+    tournamentList = tournaments.map(tournament => {
+      let startString = tournament.startDate.toString();
+      let endString = tournament.endDate.toString();
+      return (
+        <Text key={tournament.id}>
+          {tournament.name} {startString} {endString}
+          <Button title="Delete" onPress={() => deleteTournament(tournament.id)}/>
+        </Text>
+      )
+    })
+    console.log(tournamentList)
+  }
 
   
-  const onChange = (event, selectedDate) => {
-    console.log(event.testID);
+  const onChangeStart = (event, selectedDate) => {
+    
     const currentDate = selectedDate || date;
     setStartDate(currentDate);
+   
+  };
+  const onChangeEnd = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
     setEndDate(currentDate);
   };
 
-
+  
   return (
     <View style={styles.container}>
       <Nav />
@@ -94,16 +118,17 @@ export default function App() {
         testID = 'startDate'
         value = {startDate}
         is24Hour={true}
-        onChange={onChange}
+        onChange={onChangeStart}
       />
       <DateTimePicker
         testID = 'endDate'
         value = {endDate}
         is24Hour={true}
-        onChange={onChange}
+        onChange={onChangeEnd}
       />
       
       <Button title="Add Tournament" onPress={addTournament}/>
+        <Text>{tournamentList}</Text>
       
     </View>
   );
