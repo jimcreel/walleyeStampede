@@ -4,8 +4,8 @@ import SelectDropdown from 'react-native-select-dropdown'
 const data = [
         "Walleye Stampede",
         "Walleye Whirl",
-        "Fish Fling",
-      
+       "Fish Fling"
+]
 
 export default function Tournament() {
     return (
