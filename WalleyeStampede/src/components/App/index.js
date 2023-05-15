@@ -1,30 +1,45 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TextInput, Button} from 'react-native';
+import { StyleSheet, Text, View, TextInput, Button, DatePickerIOSBase} from 'react-native';
 import Nav from '../Nav';
 import Tournament from '../Tournament';
 import * as SQLite from 'expo-sqlite';
 import {useState, useEffect} from 'react';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 
 export default function App() {
   const db = SQLite.openDatabase('walleyeStampede.db');
-  const [isLoading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
-  const [currentTournament, setCurrentTournament] = useState({undefined});
+  const [isLoading, setLoading] = useState(true);
+  const [tournaments, setTournaments] = useState([]);
+  const [currentTournament, setCurrentTournament] = useState(undefined);
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
 
-  useEffect(() => {
-    db.transaction(tx => {
-      tx.executeSql('create table if not exists tournaments (id integer primary key not null autoincrement, name text, startDate date, endDate date);');
-    });
+    useEffect(() => {
+      db.transaction(tx => {
+        tx.executeSql('DROP TABLE IF EXISTS tournaments;', [], 
+          () => console.log('Drop successful'),
+          (_, error) => { console.log('Error dropping table: ', error); return true; }
+        );
+    
+        tx.executeSql(
+          'CREATE TABLE IF NOT EXISTS tournaments (id integer primary key not null, name text, startDate date, endDate date);', [],
+          () => { console.log('Table created or already exists'); },
+          (_, error) => { console.log('Error occurred while creating the table: ', error); return true; }
+        );
+      });
+      db.transaction(tx => {
+        tx.executeSql('select * from tournaments;', [],
+          (_, { rows: { _array } }) => setTournaments(_array),
+          (_, error) => console.log('Error', error)
+        );
+      });
+      setLoading(false);
+    }, []);
+    
+  
 
-    db.transaction(tx => {
-      tx.executeSql('select * from tournaments;', null , 
-      (txObj, resultSet) => setData(resultSet.rows._array),
-      (txObj, error) => console.log('Error', error));
-    });
-
-    setLoading(false);
-  }, []);
+   
   
 
   if (isLoading) {
@@ -35,25 +50,61 @@ export default function App() {
     )
   }
 
-  const showData = () => {
-    return data.map((item, index) => {
+  const addTournament = () => {
+    db.transaction(tx => {
+      tx.executeSql('insert into tournaments (name, startDate, endDate) values (?);', [currentTournament], 
+      (txObj, resultSet) => {
+        let existingTournaments = [...tournaments];
+        existingTournaments = [...existingTournaments, {id: resultSet.insertId, name: currentTournament, startDate: startDate, endDate: endDate}];
+        setTournaments(existingTournaments);
+        setCurrentTournament(undefined);
+      },
+      (txObj, error) => console.log('Error', error));
+    });
+  }
+
+  const showTournaments = () => {
+    return tournaments.map((item, index) => {
       return (
         <View key={index}>
           <Text>{item.name}</Text>
         </View>
-      )
+      );
     });
   }
 
+
+  
+  const onChange = (event, selectedDate) => {
+    console.log(event.testID);
+    const currentDate = selectedDate || date;
+    setStartDate(currentDate);
+    setEndDate(currentDate);
+  };
 
 
   return (
     <View style={styles.container}>
       <Nav />
       <Text>This app is for the Walleye Stampede. Please deposit $10,000</Text>
-      <Tournament data = {data}></Tournament>
+      
       <StatusBar style="auto" />
-      <TextInput value = {currentTournament} onChangeText={setCurrentTournament} placeholder="Enter Tournament Name"></TextInput>
+      <TextInput value ={currentTournament} onChangeText={setCurrentTournament} placeholder="Enter Tournament Name"/>
+      <DateTimePicker
+        testID = 'startDate'
+        value = {startDate}
+        is24Hour={true}
+        onChange={onChange}
+      />
+      <DateTimePicker
+        testID = 'endDate'
+        value = {endDate}
+        is24Hour={true}
+        onChange={onChange}
+      />
+      
+      <Button title="Add Tournament" onPress={addTournament}/>
+      
     </View>
   );
 }
@@ -63,6 +114,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    justifyContent: 'space-between',
+    margin: 0
+  }
 });
